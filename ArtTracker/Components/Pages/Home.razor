@@ -1,22 +1,375 @@
 ﻿@page "/"
+@using ApexCharts
+@using ArtTracker.Data.Trophies
+@using ArtTracker.Data.Users
+@using TinyLeadsBank.Components.Pages.Dialogs
+@using Color = MudBlazor.Color
+@inject TrophyService trophyService
+@inject IDialogService dialogService
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Art Trophies</PageTitle>
 
-<h1>Hello, world!</h1>
+<MudTabs Position="Position.Top">
+    <MudTabPanel Text="Settings">
+        <MudSimpleTable Striped Bordered>
+            <thead>
+                <tr>
+                    <th>Category</th>
+                    <th>Color</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (Category cat in Categories.OrderBy(e => e.OrderNumber))
+                {
+                    <tr>
+                        <td><MudTextField @bind-Value="cat.CategoryName" Immediate /></td>
+                        <td>
+                            <MudSelect @bind-Value="cat.CategoryColor" T="MudBlazor.Color">
+                                @foreach (ColorPickOption option in Options)
+                                {
+                                    <MudSelectItem Value="option.Color"><MudText Color="option.Color">@option.Name</MudText></MudSelectItem>
+                                }
+                            </MudSelect>
+                        </td>
+                        <td>
+                            <MudIconButton OnClick="() => Save(cat)" Color="Color.Success" Icon="@Icons.Material.TwoTone.Save" Disabled="string.IsNullOrWhiteSpace(cat.CategoryName)" />
+                            <MudIconButton OnClick="() => Delete(cat)" Color="Color.Error" Icon="@Icons.Material.TwoTone.DeleteForever" />
+                            <MudIconButton OnClick="() => MoveUp(cat)" Color="Color.Primary" Icon="@Icons.Material.TwoTone.ArrowCircleUp" />
+                            <MudIconButton OnClick="() => MoveDown(cat)" Color="Color.Primary" Icon="@Icons.Material.TwoTone.ArrowCircleDown" />
+                        </td>
+                    </tr>
+                }
+                @if (Categories.Count < 10)
+                {
+                    @if (CreatingNew)
+                    {
+                        <tr>
+                            <td><MudTextField @bind-Value="NewCat" Label="New Category" Immediate /></td>
+                            <td></td>
+                            <td>
+                                <MudIconButton OnClick="Create" Color="Color.Success" Icon="@Icons.Material.TwoTone.Save" Disabled="string.IsNullOrWhiteSpace(NewCat)" />
+                                <MudIconButton OnClick="CancelCreate" Color="Color.Warning" Icon="@Icons.Material.TwoTone.Cancel" />
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="3"><MudButton Color="Color.Info" Variant="Variant.Filled" OnClick="() => CreatingNew = true">Create New</MudButton></td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </MudSimpleTable>
+    </MudTabPanel>
+    <MudTabPanel Text="Dreams">
+        <MudStack>
+            <MudButton OnClick="() => EditItem()" Color="Color.Info" Variant="Variant.Filled">Create New</MudButton>
+            <MudTable Items="Categories.SelectMany(e => e.Items).Where(e => e.Efforts.Count == 0)" Striped Bordered>
+                <HeaderContent>
+                    <MudTh>Name</MudTh>
+                    <MudTh>Description</MudTh>
+                    <MudTh>Actions</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>
+                        <MudText Color="@(context.Category?.CategoryColor ?? Color.Default)" Typo="GetTypo(context.EstEffort)">@context.ItemName</MudText></MudTd>
+                    <MudTd>@context.ItemDescription</MudTd>
+                    <MudTd>
+                        <MudIconButton OnClick="() => EditItem(context)" Icon="@Icons.Material.TwoTone.Edit" Color="Color.Info" />
+                        <MudIconButton OnClick="() => AddEffort(context)" Icon="@Icons.Material.TwoTone.Launch" Color="Color.Success" />
+                        <MudIconButton OnClick="() => DeleteItem(context)" Icon="@Icons.Material.TwoTone.DeleteForever" Color="Color.Error" />
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudStack>
+    </MudTabPanel>
+    <MudTabPanel Text="In Progress">
+        <MudTable Items="Categories.SelectMany(e => e.Items).Where(e => e.Efforts.Count > 0 && !e.Completed)" Striped Bordered>
+                <HeaderContent>
+                    <MudTh>Name</MudTh>
+                    <MudTh>Description</MudTh>
+                    <MudTh>Efforts</MudTh>
+                    <MudTh>Score</MudTh>
+                    <MudTh>Actions</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>
+                        <MudText Color="@(context.Category?.CategoryColor ?? Color.Default)">@context.ItemName</MudText>
+                    </MudTd>
+                    <MudTd>@context.ItemDescription</MudTd>
+                    <MudTd>@context.Efforts.Count</MudTd>
+                    <MudTd>@context.Score</MudTd>
+                    <MudTd>
+                        <MudIconButton OnClick="() => EditItem(context)" Icon="@Icons.Material.TwoTone.Edit" Color="Color.Info" />
+                        <MudIconButton OnClick="() => AddEffort(context)" Icon="@Icons.Material.TwoTone.AddCircle" Color="Color.Success" />
+                        <MudIconButton OnClick="() => DeleteItem(context)" Icon="@Icons.Material.TwoTone.DeleteForever" Color="Color.Error" />
+                        <MudToggleIconButton Icon="@Icons.Material.TwoTone.ExpandMore" ToggledIcon="@Icons.Material.TwoTone.ExpandLess"
+                                             Color="Color.Info" ToggledColor="Color.Warning" ToggledChanged="() => context.ViewEfforts = !context.ViewEfforts" />
+                    </MudTd>
+                </RowTemplate>
+                <ChildRowContent>
+                    @if (context.ViewEfforts)
+                    {
+                        <MudTr>
+                            <td colspan="5">
+                                <MudTable Items="context.Efforts.OrderByDescending(e => e.CreatedTimeStamp)" Context="ctx2">
+                                    <HeaderContent>
+                                        <MudTh>Hours</MudTh>
+                                        <MudTh>Effort</MudTh>
+                                        <MudTh>Date</MudTh>
+                                        <MudTh>Notes</MudTh>
+                                        <MudTh>Edit</MudTh>
+                                    </HeaderContent>
+                                    <RowTemplate>
+                                        <MudTd>@ctx2.HoursSpent</MudTd>
+                                        <MudTd>@ctx2.EffortLevel</MudTd>
+                                        <MudTd>@ctx2.CreatedTimeStamp.ToString("MM/dd/yy")</MudTd>
+                                        <MudTd>@ctx2.EffortNotes</MudTd>
+                                        <MudTd>
+                                            <MudIconButton Color="Color.Info" Icon="@Icons.Material.TwoTone.Edit" OnClick="() => EditEffort(ctx2)" />
+                                        </MudTd>
+                                    </RowTemplate>
+                                </MudTable>
+                            </td>
+                        </MudTr>
+                    }
+                </ChildRowContent>
+            </MudTable>
+    </MudTabPanel>
+    <MudTabPanel Text="Trophies">
+        <MudTabs Position="Position.Left">
+            <MudTabPanel Text="Timeline">
+                <MudPaper Width="1200px">
+                    <MudCheckBox @bind-Value="ShowInProgress" @bind-Value:after="Refresh">Show In Progress</MudCheckBox>
+                    <ApexChart @ref="apexChart" TItem="EffortChartPt"
+                        Title="Timeline of Effort" XAxisType="XAxisType.Datetime">
+                        @foreach (Category category in Categories)
+                        {
+                            <ApexPointSeries TItem="EffortChartPt" SeriesType="SeriesType.Scatter" Name="@(category.CategoryName)"
+                            Items="category.Points(ShowInProgress)" XValue="e => e.Date" YValue="e => e.TotalEffort" />
+                        }
+                    </ApexChart>
+                </MudPaper>
+            </MudTabPanel>
+            <MudTabPanel Text="Categories">
+                <MudSimpleTable>
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Completed Items</th>
+                            <th>Total Score</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (Category cat in Categories.OrderByDescending(e => e.Score).ThenByDescending(e => e.Items.Count).ThenBy(e => e.OrderNumber))
+                        {
+                            <tr>
+                                <td>
+                                    <MudChip T="Category" Color="@(cat.CategoryColor)" CloseIcon="">@cat.CategoryName</MudChip>
+                                </td>
+                                <td>@cat.Items.Count(e => e.Completed)</td>
+                                <td>@cat.Score</td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+            </MudTabPanel>
+            <MudTabPanel Text="Leaderboard">
+                <MudTable Items="Categories.SelectMany(e => e.Items).Where(e => e.Completed).OrderByDescending(e => e.Score)" Striped Bordered>
+                <HeaderContent>
+                    <MudTh>Name</MudTh>
+                    <MudTh>Description</MudTh>
+                    <MudTh>Efforts</MudTh>
+                    <MudTh>Score</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>
+                        <MudText Color="@(context.Category?.CategoryColor ?? Color.Default)">@context.ItemName</MudText>
+                    </MudTd>
+                    <MudTd>@context.ItemDescription</MudTd>
+                    <MudTd>@context.Efforts.Count</MudTd>
+                    <MudTd>@context.Score</MudTd>
+                </RowTemplate>
+            </MudTable>
+            </MudTabPanel>
+        </MudTabs>
+    </MudTabPanel>
+</MudTabs>
 
-<MudText>This is the V3 App Template for prions. To do list:</MudText>
 
-<MudTreeView AutoExpand="true" ExpandOnClick="true" T="string" ReadOnly>
-    <MudTreeViewItem Text="Completed" Expanded>
-        <MudTreeViewItem Text="MudBlazor w/theme & darkmode" />
-        <MudTreeViewItem Text="Auth0 authentication" />
-        <MudTreeViewItem Text="Emails" />
-        <MudTreeViewItem Text="SQL user system" />
-        <MudTreeViewItem Text="Audit Logins" />
-        <MudTreeViewItem Text="Timer component" />
-        <MudTreeViewItem Text="User Secrets" />
-    </MudTreeViewItem>
-    <MudTreeViewItem Text="Stretch Goals" Expanded>
-        <MudTreeViewItem Text="Stripe payments..." />
-    </MudTreeViewItem>
-</MudTreeView> 
+@code {
+    [CascadingParameter] public Auth0User? User { get; set; }
+    private List<Category> Categories { get; set; } = [];
+    private bool _loaded;
+    protected override void OnParametersSet()
+    {
+        if (User != null && !_loaded)
+        {
+            Categories = trophyService.GetCategoriesByUserID(User.UserID);
+            _loaded = true;
+        }
+    }
+    private ApexChart<EffortChartPt>? apexChart { get; set; }
+    private async Task Refresh()
+    {
+        if (apexChart != null)
+            await apexChart.RenderAsync();
+    }
+    private bool ShowInProgress { get; set; } = false;
+    private string? NewCat { get; set; }
+    private bool CreatingNew { get; set; }
+    private void CancelCreate()
+    {
+        CreatingNew = false;
+        NewCat = null;
+    }
+    private void Create()
+    {
+        if (User == null)
+            return;
+        Category newcat = new() {
+            UserID = User.UserID,
+            CategoryColor = Color.Default,
+            CategoryName = NewCat ?? "",
+            OrderNumber = Categories.Count + 1
+        };
+        trophyService.CreateCategory(newcat);
+        Categories.Add(newcat);
+        CreatingNew = false;
+        NewCat = null;
+    }
+    private void Save(Category cat)
+    {
+        trophyService.UpdateCategory(cat);
+    }
+    private void Delete(Category cat)
+    {
+        trophyService.DeleteCategory(cat);
+        Categories.Remove(cat);
+    }
+    private void MoveUp(Category cat)
+    {
+        int i = 1;
+        Categories = Categories.OrderBy(e => e.OrderNumber).ToList();
+        while (i < Categories.Count && Categories[i].ID != cat.ID)
+        {
+            i++;
+        }
+        if (i == Categories.Count)
+            return;
+        int tmp = Categories[i].OrderNumber;
+        Categories[i].OrderNumber = Categories[i-1].OrderNumber;
+        Categories[i-1].OrderNumber = tmp;
+        trophyService.UpdateCategory(Categories[i]);
+        trophyService.UpdateCategory(Categories[i-1]);
+    }
+    private void MoveDown(Category cat)
+    {
+        int i = 0;
+        Categories = Categories.OrderBy(e => e.OrderNumber).ToList();
+        while (i < Categories.Count-1 && Categories[i].ID != cat.ID)
+        {
+            i++;
+        }
+        if (i >= Categories.Count-1)
+            return;
+        int tmp = Categories[i].OrderNumber;
+        Categories[i].OrderNumber = Categories[i+1].OrderNumber;
+        Categories[i+1].OrderNumber = tmp;
+        trophyService.UpdateCategory(Categories[i]);
+        trophyService.UpdateCategory(Categories[i+1]);
+    }
+    private async Task EditItem(Item? item = null)
+    {
+        var options = new DialogOptions()
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true
+        };
+        var parameters = new DialogParameters();
+        parameters.Add(nameof(ItemEditorDialog.Categories), Categories);
+        if (item != null)
+            parameters.Add(nameof(ItemEditorDialog.Item), item);
+        var dialog = dialogService.ShowAsync<ItemEditorDialog>("Create New Item", parameters, options);
+        var result = await dialog;
+        var result2 = await result.Result;
+        //the dialog does the saving/creating
+    }
+    private void DeleteItem(Item item)
+    {
+        foreach (Category cat in Categories)
+        {
+            if (cat.Items.Any(e => e.ID == item.ID))
+            {
+                cat.Items.Remove(item);
+            }
+        }
+        trophyService.DeleteItem(item);
+    }
+    private async Task AddEffort(Item item)
+    {
+        var options = new DialogOptions()
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+        var parameters = new DialogParameters();
+        parameters.Add(nameof(AddEffortDialog.Item), item);
+        var dialog = dialogService.ShowAsync<AddEffortDialog>("Create New Effort", parameters, options);
+        var result = await dialog;
+        var result2 = await result.Result;
+        //the dialog does the saving itself
+    }
+    private async Task EditEffort(Effort effort)
+    {
+        var options = new DialogOptions()
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+        var parameters = new DialogParameters();
+        parameters.Add(nameof(AddEffortDialog.Item), effort.Item);
+        parameters.Add(nameof(AddEffortDialog.Effort), effort);
+        var dialog = dialogService.ShowAsync<AddEffortDialog>("Edit Effort", parameters, options);
+        var result = await dialog;
+        var result2 = await result.Result;
+    }
+
+    #region Utilities and classes
+    private List<ColorPickOption> Options { get; set; } = [
+        new() { Color = Color.Dark, Name = "Black" },
+        new() { Color = Color.Info, Name = "Blue" },
+        new() { Color = Color.Primary, Name = "Purple" },
+        new() { Color = Color.Secondary, Name = "Fuchsia" },
+        new() { Color = Color.Error, Name = "Red" },
+        new() { Color = Color.Warning, Name = "Yellow" },
+        new() { Color = Color.Success, Name = "Green" },
+        new() { Color = Color.Default, Name = "Gray" }
+    ];
+    public class ColorPickOption
+    {
+        public MudBlazor.Color Color { get; set; }
+        public string Name { get; set; }
+    }
+    
+    private Typo GetTypo(int? i)
+    {
+        switch (i)
+        {
+            case 1: return Typo.h6;
+            case 2: return Typo.h5;
+            case 3: return Typo.h4;
+            case 4: return Typo.h3;
+            default: return Typo.body1;
+        }
+    }
+    
+    
+    #endregion
+
+}

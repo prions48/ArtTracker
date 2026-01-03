@@ -1,0 +1,70 @@
+@namespace TinyLeadsBank.Components.Pages.Dialogs
+@using ArtTracker.Data.Trophies
+@inject TrophyService trophyService
+@inject IDialogService dialogService
+
+<MudDialog>
+    <DialogContent>
+        <MudStack>
+            <MudDatePicker @bind-Date="SelectedDate" Label="Date of Work" />
+            <MudSelect @bind-Value="Effort.EffortLevel" Label="Effort Level">
+                <MudSelectItem Value="1">Low</MudSelectItem>
+                <MudSelectItem Value="2">Medium</MudSelectItem>
+                <MudSelectItem Value="3">High</MudSelectItem>
+                <MudSelectItem Value="4">Pain!</MudSelectItem>
+            </MudSelect>
+            <MudNumericField @bind-Value="Effort.HoursSpent" HideSpinButtons Label="Hours Spent" />
+            <MudTextField @bind-Value="Effort.EffortNotes" Lines="3" Label="Notes" />
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Filled" Color="Color.Default">Cancel</MudButton>
+        <MudButton OnClick="Submit" Variant="Variant.Filled" Color="Color.Info" Disabled="Effort.EffortLevel == 0 || Effort.HoursSpent == 0 || SelectedDate == null">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Item Item { get; set; } = new();
+    [Parameter] public Effort Effort { get; set; } = new();
+    private DateTime? SelectedDate { get; set; } = DateTime.Now;
+    void Submit()
+    {
+        if (SelectedDate == null)
+            return;
+        if (Effort.ItemID == Guid.Empty)
+        {
+            Effort.ItemID = Item.ID;
+            Effort.CreatedTimeStamp = SelectedDate.Value;
+            Item.Efforts.Add(Effort);
+            trophyService.CreateEffort(Effort);
+        }
+        else
+        {
+            trophyService.UpdateEffort(Effort);
+        }
+        MudDialog.Close(DialogResult.Ok(Item));
+    }
+    void Cancel() => MudDialog.Close(DialogResult.Cancel());
+
+    /*
+        var options = new DialogOptions()
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Medium
+        };
+        var parameters = new DialogParameters();
+        parameters.Add(nameof(ConfirmDialog.Message), $"Delete the topic \"{topic.TopicName}\"?");
+        parameters.Add(nameof(ConfirmDialog.ButtonText), "Yes, Delete");
+        parameters.Add(nameof(ConfirmDialog.ButtonColor), Color.Error);
+        var dialog = dialogService.ShowAsync<ConfirmDialog>("Confirm Delete?", parameters, options);
+        var result = await dialog;
+        var result2 = await result.Result;
+        if (result2?.Canceled == false)
+        {
+            Topics.Remove(topic);
+            testService.DeleteTopic(topic);
+        }
+    */
+}
+

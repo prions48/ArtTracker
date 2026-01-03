@@ -1,0 +1,27 @@
+CREATE TABLE TrophyCategories (
+    ID UNIQUEIDENTIFIER NOT NULL,
+    UserID UNIQUEIDENTIFIER NOT NULL,
+    CategoryName NVARCHAR(1000) NOT NULL,
+    CategoryColor INT NOT NULL,
+    OrderNumber INT NOT NULL,
+    PRIMARY KEY (ID)
+);
+CREATE TABLE TrophyItems (
+    ID UNIQUEIDENTIFIER NOT NULL,
+    CategoryID UNIQUEIDENTIFIER NOT NULL,
+    ItemName NVARCHAR(1000) NOT NULL,
+    ItemDescription NVARCHAR(4000) NULL,
+    CreatedTimeStamp DATETIME NOT NULL,
+    Completed BIT NOT NULL,
+    EstEffort INT NULL,
+    PRIMARY KEY (ID)
+);
+CREATE TABLE TrophyItemEfforts (
+    ID UNIQUEIDENTIFIER NOT NULL,
+    ItemID UNIQUEIDENTIFIER NOT NULL,
+    HoursSpent INT NOT NULL,
+    EffortLevel INT NOT NULL,
+    CreatedTimeStamp DATETIME NOT NULL,
+    EffortNotes NVARCHAR(1000) NULL,
+    PRIMARY KEY (ID)
+);

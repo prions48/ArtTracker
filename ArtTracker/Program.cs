@@ -7,6 +7,7 @@ using ArtTracker.Data.Email;
 using ArtTracker.Data.Files;
 using ArtTracker.Data.Users;
 using Microsoft.EntityFrameworkCore;
+using ArtTracker.Data.Trophies;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,6 +30,9 @@ builder.Services.AddScoped<FileService>();
 
 builder.Services.AddDbContext<UserContext>(o => o.UseSqlServer(builder.Configuration["ConnectionStrings:SQL"]));
 builder.Services.AddScoped<UserService>();
+
+builder.Services.AddDbContext<TrophyContext>(o => o.UseSqlServer(builder.Configuration["ConnectionStrings:SQL"]));
+builder.Services.AddScoped<TrophyService>();
 
 
 var app = builder.Build();
