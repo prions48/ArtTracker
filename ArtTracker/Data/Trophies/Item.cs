@@ -11,6 +11,7 @@ namespace ArtTracker.Data.Trophies
         public string? ItemDescription { get; set; }
         public DateTime CreatedTimeStamp { get; set; }
         public bool Completed { get; set; }
+        public DateTime? CompletedDate { get; set; }
         public int? EstEffort { get; set; }
         public Category? Category { get; set; }
         public List<Effort> Efforts { get; set; } = [];

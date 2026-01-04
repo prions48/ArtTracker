@@ -47,6 +47,8 @@
     {
         if (SelectedCategory == null)
             return;
+        if (Item.Completed && Item.CompletedDate == null)
+            Item.CompletedDate = DateTime.Now;
         if (Item.CategoryID == Guid.Empty)
         {
             Item.CategoryID = SelectedCategory.ID;

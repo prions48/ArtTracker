@@ -158,6 +158,8 @@
                     <thead>
                         <tr>
                             <th>Category</th>
+                            <th>All Items</th>
+                            <th>In Progress Items</th>
                             <th>Completed Items</th>
                             <th>Total Score</th>
                         </tr>
@@ -169,6 +171,8 @@
                                 <td>
                                     <MudChip T="Category" Color="@(cat.CategoryColor)" CloseIcon="">@cat.CategoryName</MudChip>
                                 </td>
+                                <td>@cat.Items.Count()</td>
+                                <td>@cat.Items.Count(e => e.Efforts.Count > 0 && !e.Completed)</td>
                                 <td>@cat.Items.Count(e => e.Completed)</td>
                                 <td>@cat.Score</td>
                             </tr>
@@ -181,6 +185,7 @@
                 <HeaderContent>
                     <MudTh>Name</MudTh>
                     <MudTh>Description</MudTh>
+                    <MudTh>Completed</MudTh>
                     <MudTh>Efforts</MudTh>
                     <MudTh>Score</MudTh>
                 </HeaderContent>
@@ -189,6 +194,7 @@
                         <MudText Color="@(context.Category?.CategoryColor ?? Color.Default)">@context.ItemName</MudText>
                     </MudTd>
                     <MudTd>@context.ItemDescription</MudTd>
+                    <MudTd>@context.CompletedDate?.ToString("MM/dd/yy")</MudTd>
                     <MudTd>@context.Efforts.Count</MudTd>
                     <MudTd>@context.Score</MudTd>
                 </RowTemplate>

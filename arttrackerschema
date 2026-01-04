@@ -13,6 +13,7 @@ CREATE TABLE TrophyItems (
     ItemDescription NVARCHAR(4000) NULL,
     CreatedTimeStamp DATETIME NOT NULL,
     Completed BIT NOT NULL,
+    CompletedDate DATETIME NULL,
     EstEffort INT NULL,
     PRIMARY KEY (ID)
 );
