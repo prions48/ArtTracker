@@ -1,0 +1,5 @@
+{
+    "appService.preDeployTask": "publish-release",
+    "appService.deploySubpath": "ArtTracker/bin/Release/net9.0/publish",
+    "appService.defaultWebAppToDeploy": "/subscriptions/5a70263a-9197-4919-aa20-74cacb98615c/resourceGroups/EZApps-Prod/providers/Microsoft.Web/sites/arttrophies"
+}
