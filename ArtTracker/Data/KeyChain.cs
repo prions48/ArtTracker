@@ -9,21 +9,21 @@ namespace ArtTracker.Data
         {
             get
             {
-                return "App Template 3";
+                return "Art Trophies";
             }
         }
         public static string AppCode
         {
             get
             {
-                return "Template3";
+                return "ArtTrophies";
             }
         }
         public static string Container
         {
             get
             {
-                return "appfilestorage";
+                return "trophypfilestorage";
             }
         }
         public static string OwnerEmail
@@ -36,7 +36,7 @@ namespace ArtTracker.Data
     }
     public enum Environ
     {
-        MainApp
+        Trophies
     }
 
 }
